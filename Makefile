@@ -1,47 +1,77 @@
-# Variables
-DATA_DIR = data
-RESULTS_DIR = results
-SCRIPTS_DIR = scripts
+# Makefile
+# Tiffany Timbers, Nov 2018
 
-# Book files (adjust these names based on your actual data files)
-BOOKS = $(wildcard $(DATA_DIR)/*.txt)
+# This driver script completes the textual analysis of
+# 3 novels and creates figures on the 10 most frequently
+# occuring words from each of the 3 novels. This script
+# takes no arguments.
 
-# Generate corresponding result files
-WORD_COUNTS = $(patsubst $(DATA_DIR)/%.txt,$(RESULTS_DIR)/%.dat,$(BOOKS))
+# example usage:
+# make all
 
-# Final report
-REPORT = $(RESULTS_DIR)/report.txt
+all : report/count_report.html
 
-# Default target
-.PHONY: all
-all: $(REPORT)
+# count the words
+results/isles.dat : data/isles.txt scripts/wordcount.py
+	python scripts/wordcount.py \
+		--input_file=data/isles.txt \
+		--output_file=results/isles.dat
 
-# Rule to generate the final report from all word count files
-$(REPORT): $(WORD_COUNTS)
-	@echo "Generating final report..."
-	python $(SCRIPTS_DIR)/generate_report.py $(WORD_COUNTS) > $@
-	@echo "Report generated: $@"
+results/abyss.dat : data/abyss.txt scripts/wordcount.py
+	python scripts/wordcount.py \
+		--input_file=data/abyss.txt \
+		--output_file=results/abyss.dat
 
-# Pattern rule to count words in each book
-$(RESULTS_DIR)/%.dat: $(DATA_DIR)/%.txt $(SCRIPTS_DIR)/count_words.py
-	@echo "Processing $<..."
-	@mkdir -p $(RESULTS_DIR)
-	python $(SCRIPTS_DIR)/count_words.py $< $@
+results/last.dat : data/last.txt scripts/wordcount.py
+	python scripts/wordcount.py \
+		--input_file=data/last.txt \
+		--output_file=results/last.dat
 
-# Clean target to remove all generated files
-.PHONY: clean
-clean:
-	@echo "Cleaning up generated files..."
-	rm -rf $(RESULTS_DIR)
-	@echo "Cleanup complete!"
+results/sierra.dat : data/sierra.txt scripts/wordcount.py
+	python scripts/wordcount.py \
+		--input_file=data/sierra.txt \
+		--output_file=results/sierra.dat
 
-# Help target
-.PHONY: help
-help:
-	@echo "Available targets:"
-	@echo "  all     - Run the complete analysis pipeline (default)"
-	@echo "  clean   - Remove all generated files"
-	@echo "  help    - Display this help message"
+# create the plots
+results/figure/isles.png : results/isles.dat scripts/plotcount.py
+	python scripts/plotcount.py \
+		--input_file=results/isles.dat \
+		--output_file=results/figure/isles.png
 
-# Prevent deletion of intermediate files
-.SECONDARY: $(WORD_COUNTS)
+results/figure/abyss.png : results/abyss.dat scripts/plotcount.py
+	python scripts/plotcount.py \
+		--input_file=results/abyss.dat \
+		--output_file=results/figure/abyss.png
+
+results/figure/last.png : results/last.dat scripts/plotcount.py
+	python scripts/plotcount.py \
+		--input_file=results/last.dat \
+		--output_file=results/figure/last.png
+
+results/figure/sierra.png : results/sierra.dat scripts/plotcount.py
+	python scripts/plotcount.py \
+		--input_file=results/sierra.dat \
+		--output_file=results/figure/sierra.png
+
+# write the report
+report/count_report.html : report/count_report.qmd \
+results/figure/isles.png \
+results/figure/abyss.png \
+results/figure/last.png \
+results/figure/sierra.png
+	quarto render report/count_report.qmd
+
+.PHONY : clean
+clean :
+	rm -f results/isles.dat \
+		results/abyss.dat \
+		results/last.dat \
+		results/sierra.dat
+	rm -f results/figure/isles.png \
+		results/figure/abyss.png \
+		results/figure/last.png \
+		results/figure/sierra.png
+	rm -rf report/count_report.html \
+		report/count_report_files
+
+
